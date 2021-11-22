@@ -82,6 +82,48 @@ extern "C" {
 #endif
 
 //=============================================================================================
+
+#include <jni.h>
+#include <SDL_system.h>
+
+//=============================================================================================
+
+void Android_setLoading(bool isLoading)
+{
+    JNIEnv* env = (JNIEnv*)SDL_AndroidGetJNIEnv();
+    if (!env)
+    {
+        return;
+    }
+
+    jobject activity = (jobject)SDL_AndroidGetActivity();
+    if (!activity)
+    {
+        return;
+    }
+
+    jclass class_native_activity = env->GetObjectClass(activity);
+    if (class_native_activity == NULL)
+    {
+        env->DeleteLocalRef(activity);
+        return;
+    }
+
+    jmethodID method_id = env->GetMethodID(class_native_activity, "setIsLoading", "(Z)V");
+    if (method_id == NULL)
+    {
+        env->DeleteLocalRef(class_native_activity);
+        env->DeleteLocalRef(activity);
+        return;
+    }
+
+
+    env->CallVoidMethod(activity, method_id, (jboolean)isLoading);
+    env->DeleteLocalRef(class_native_activity);
+    env->DeleteLocalRef(activity);
+}
+
+//=============================================================================================
 RaceManager* g_race_manager[PT_COUNT];
 //---------------------------------------------------------------------------------------------
 RaceManager* RaceManager::get()
@@ -534,6 +576,7 @@ void RaceManager::startNextRace()
     // Throttles GPU while boosting CPU
     appletSetCpuBoostMode(ApmCpuBoostMode_FastLoad);
 #endif
+    Android_setLoading(true);
     ProcessType type = STKProcess::getType();
     main_loop->renderGUI(0);
     // Uncomment to debug audio leaks
@@ -708,6 +751,7 @@ void RaceManager::startNextRace()
         m_kart_status[i].m_last_time  = 0;
     }
     main_loop->renderGUI(8200);
+    Android_setLoading(false);
 #ifdef __SWITCH__
     appletSetCpuBoostMode(ApmCpuBoostMode_Normal);
 #endif

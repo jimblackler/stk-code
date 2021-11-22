@@ -8,6 +8,8 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
+import android.app.GameContext;
+import android.app.GameManager;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -355,6 +357,11 @@ public class SuperTuxKartActivity extends SDLActivity
                     selection_end);
             }
         });
+    }
+    // ------------------------------------------------------------------------
+    public void setIsLoading(final boolean isLoading) {
+      GameManager gameManager = getSystemService(GameManager.class);
+      gameManager.setGameContext(new GameContext(isLoading));
     }
     // ------------------------------------------------------------------------
     public String[] getDNSTxtRecords(String domain)
