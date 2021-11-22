@@ -27,9 +27,9 @@ apply plugin: 'com.android.application'
 
 android
 {
-    compileSdkVersion compile_sdk_version.toInteger()
-    buildToolsVersion build_tools_ver
-    ndkVersion ndk_version
+    compileSdkVersion 'android-Tiramisu'
+    buildToolsVersion '30.0.2'
+    ndkVersion '23.0.7599858'
     externalNativeBuild
     {
         ndkBuild
@@ -46,15 +46,8 @@ android
         {
             ndkBuild
             {
-                arguments 'APP_PLATFORM=android-16', 'APP_STL=c++_static', cpu_core
-                if (project.getProperty('compile_arch') == 'all')
-                {
-                    abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
-                }
-                else
-                {
-                    abiFilters project.getProperty('compile_arch')
-                }
+                arguments 'APP_PLATFORM=android-16', 'APP_STL=c++_static', '-j13'
+                abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
             }
         }
         def runTasks = gradle.startParameter.taskNames
@@ -62,17 +55,6 @@ android
         {
             // use SYMBOL_TABLE if too large later (max limit on google play is 300MB)
             ndk.debugSymbolLevel 'FULL'
-        }
-    }
-
-    signingConfigs
-    {
-        release
-        {
-            storeFile file(keystore)
-            storePassword storepass
-            keyAlias alias
-            keyPassword storepass
         }
     }
 
@@ -94,19 +76,6 @@ android
                     cppFlags '-O0'
                 }
             }
-        }
-
-        release
-        {
-            externalNativeBuild
-            {
-                ndkBuild
-                {
-                    cFlags '-O3'
-                    cppFlags '-O3'
-                }
-            }
-            signingConfig signingConfigs.release
         }
     }
 
