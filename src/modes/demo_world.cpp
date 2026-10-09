@@ -31,8 +31,8 @@
 #include <limits>
 
 std::vector<std::string> DemoWorld::m_demo_tracks;
-int                      DemoWorld::m_default_num_karts = 2;
-float                    DemoWorld::m_max_idle_time     = std::numeric_limits<float>::max();
+int                      DemoWorld::m_default_num_karts = 4;
+float                    DemoWorld::m_max_idle_time     = 10.0f;
 float                    DemoWorld::m_current_idle_time = 0;
 bool                     DemoWorld::m_do_demo           = false;
 

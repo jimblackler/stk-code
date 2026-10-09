@@ -466,7 +466,7 @@ namespace UserConfigParams
             PARAM_DEFAULT(  BoolUserConfigParam(false, "random-arena-item",
             &m_race_setup_group, "Enable random location of items in an arena.") );
     PARAM_PREFIX IntUserConfigParam          m_difficulty
-            PARAM_DEFAULT(  IntUserConfigParam(0, "difficulty",
+            PARAM_DEFAULT(  IntUserConfigParam(3, "difficulty",
                             &m_race_setup_group,
                         "Default race difficulty. 0=easy, 1=medium, 2=hard, 3=supertux") );
     PARAM_PREFIX IntUserConfigParam          m_game_mode
@@ -1423,7 +1423,7 @@ namespace UserConfigParams
                         "Change this at your own risk (of getting UI overflows).") );
 						
     PARAM_PREFIX StringUserConfigParam      m_commandline
-            PARAM_DEFAULT( StringUserConfigParam("", "commandline",
+            PARAM_DEFAULT( StringUserConfigParam("--demo-mode=10 --demo-karts=4 --demo-laps=1", "commandline",
                              "Allows one to set commandline args in config file") );
 
     // TODO? implement blacklist for new irrlicht device and GUI
