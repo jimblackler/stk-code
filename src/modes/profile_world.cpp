@@ -33,7 +33,7 @@
 #include <sstream>
 
 ProfileWorld::ProfileType ProfileWorld::m_profile_mode=PROFILE_NONE;
-int   ProfileWorld::m_num_laps    = 0;
+int   ProfileWorld::m_num_laps    = 1;
 float ProfileWorld::m_time        = 0.0f;
 
 //-----------------------------------------------------------------------------
