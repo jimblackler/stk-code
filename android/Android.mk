@@ -1,6 +1,11 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
+PACKAGE_NAME ?= org.supertuxkart.stk_dbg
+APP_DIR_NAME ?= supertuxkart-dbg
+PROJECT_VERSION ?= git
+PACKAGE_CLASS_NAME ?= org/supertuxkart/stk_dbg
+
 
 # OpenAL
 LOCAL_MODULE := openal
