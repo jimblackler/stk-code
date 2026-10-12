@@ -15,6 +15,7 @@ GEVulkanFBOTexture::GEVulkanFBOTexture(GEVulkanDriver* vk,
                                        bool lazy_depth)
                   : GEVulkanTexture()
 {
+    NamedPath.setPath("fbo_color_texture");
     m_vk = vk;
     m_vulkan_device = m_vk->getDevice();
     m_image = VK_NULL_HANDLE;
@@ -24,7 +25,7 @@ GEVulkanFBOTexture::GEVulkanFBOTexture(GEVulkanDriver* vk,
     m_size = m_orig_size = size;
     m_internal_format = VK_FORMAT_B8G8R8A8_UNORM;
     m_depth_texture = GEVulkanAttachmentTexture::createDepthTexture(
-        m_vk, size, lazy_depth);
+        m_vk, size, lazy_depth, "fbo_depth_texture");
 }   // GEVulkanFBOTexture
 
 // ----------------------------------------------------------------------------
@@ -119,6 +120,8 @@ void GEVulkanFBOTexture::createRTT()
     if (vkCreateRenderPass(m_vk->getDevice(), &render_pass_info, NULL,
         &m_rtt_render_pass[0]) != VK_SUCCESS)
         throw std::runtime_error("vkCreateRenderPass failed in createFBOdata");
+    m_vk->setObjectName(VK_OBJECT_TYPE_RENDER_PASS, m_rtt_render_pass[0],
+        "fbo_rtt_render_pass");
 
     std::array<VkImageView, 2> attachments =
     {{
@@ -139,6 +142,8 @@ void GEVulkanFBOTexture::createRTT()
     if (vkCreateFramebuffer(m_vk->getDevice(), &framebuffer_info,
         NULL, &m_rtt_frame_buffer[0]) != VK_SUCCESS)
         throw std::runtime_error("vkCreateFramebuffer failed in createFBOdata");
+    m_vk->setObjectName(VK_OBJECT_TYPE_FRAMEBUFFER, m_rtt_frame_buffer[0],
+        "fbo_rtt_framebuffer");
 }   // createRTT
 
 // ----------------------------------------------------------------------------

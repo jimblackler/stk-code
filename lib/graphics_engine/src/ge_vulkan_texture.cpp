@@ -202,7 +202,8 @@ bool GEVulkanTexture::createTextureImage(uint8_t* texture_data,
 
     bool success = m_vk->createBuffer(image_total_size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT, staging_buffer_create_info,
-        staging_buffer, staging_buffer_allocation);
+        staging_buffer, staging_buffer_allocation,
+        (std::string(NamedPath.getPtr()) + "_staging_buffer").c_str());
 
     if (!success)
         return false;
@@ -304,6 +305,11 @@ bool GEVulkanTexture::createImage(VkImageUsageFlags usage)
 
     if (result != VK_SUCCESS)
         return false;
+
+    const char* tex_name = NamedPath.getPtr();
+    if (!tex_name || tex_name[0] == '\0')
+        tex_name = "unnamed_texture";
+    m_vk->setObjectName(VK_OBJECT_TYPE_IMAGE, m_image, tex_name);
 
     return true;
 }   // createImage
@@ -471,12 +477,18 @@ bool GEVulkanTexture::createImageView(VkImageAspectFlags aspect_flags,
         view_info.components.a = VK_COMPONENT_SWIZZLE_R;
     }
 
+    const char* tex_name = NamedPath.getPtr();
+    if (!tex_name || tex_name[0] == '\0')
+        tex_name = "unnamed_texture";
+
     auto image_view = std::make_shared<std::atomic<VkImageView> >();
     VkImageView view_ptr = VK_NULL_HANDLE;
     VkResult result = vkCreateImageView(m_vulkan_device, &view_info, NULL,
         &view_ptr);
     if (result == VK_SUCCESS)
     {
+        m_vk->setObjectName(VK_OBJECT_TYPE_IMAGE_VIEW, view_ptr,
+            std::string(tex_name) + "_view");
         image_view.get()->store(view_ptr);
         m_image_view = image_view;
         VkFormat srgb_format = getSRGBformat(m_internal_format);
@@ -488,6 +500,8 @@ bool GEVulkanTexture::createImageView(VkImageAspectFlags aspect_flags,
             if (vkCreateImageView(m_vulkan_device, &view_info,
                 NULL, &view_ptr) == VK_SUCCESS)
             {
+                m_vk->setObjectName(VK_OBJECT_TYPE_IMAGE_VIEW, view_ptr,
+                    std::string(tex_name) + "_srgb_view");
                 image_view.get()->store(view_ptr);
                 m_image_view_srgb = image_view;
             }
@@ -651,7 +665,8 @@ uint8_t* GEVulkanTexture::getTextureData()
 
     if (!m_vk->createBuffer(image_size,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT, buffer_create_info, buffer,
-        buffer_allocation))
+        buffer_allocation,
+        (std::string(NamedPath.getPtr()) + "_readback_buffer").c_str()))
         return NULL;
 
     VkCommandBuffer command_buffer = GEVulkanCommandLoader::beginSingleTimeCommands();
@@ -712,6 +727,8 @@ void GEVulkanTexture::updateTexture(void* data, video::ECOLOR_FORMAT format,
     staging_buffer_create_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
     staging_buffer_create_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     staging_buffer_create_info.preferredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    std::string staging_name = std::string(NamedPath.getPtr()) +
+        "_update_staging_buffer";
     if (isSingleChannel())
     {
         if (format == video::ECF_R8)
@@ -719,7 +736,8 @@ void GEVulkanTexture::updateTexture(void* data, video::ECOLOR_FORMAT format,
             unsigned image_size = w * h;
             if (!m_vk->createBuffer(image_size,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, staging_buffer_create_info,
-                staging_buffer, staging_buffer_allocation))
+                staging_buffer, staging_buffer_allocation,
+                staging_name.c_str()))
                 return;
 
             void* mapped_data;
@@ -738,7 +756,8 @@ void GEVulkanTexture::updateTexture(void* data, video::ECOLOR_FORMAT format,
             unsigned image_size = w * h * 4;
             if (!m_vk->createBuffer(w * h * 4,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, staging_buffer_create_info,
-                staging_buffer, staging_buffer_allocation))
+                staging_buffer, staging_buffer_allocation,
+                staging_name.c_str()))
                 return;
 
             const unsigned int size = w * h;
@@ -759,7 +778,8 @@ void GEVulkanTexture::updateTexture(void* data, video::ECOLOR_FORMAT format,
             unsigned image_size = w * h * 4;
             if (!m_vk->createBuffer(w * h * 4,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, staging_buffer_create_info,
-                staging_buffer, staging_buffer_allocation))
+                staging_buffer, staging_buffer_allocation,
+                staging_name.c_str()))
                 return;
 
             uint8_t* u8_data = (uint8_t*)data;

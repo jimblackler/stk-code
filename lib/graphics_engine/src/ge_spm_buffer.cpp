@@ -43,7 +43,7 @@ void GESPMBuffer::createVertexIndexBuffer()
     if (!vk->createBuffer(total_size,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT, staging_buffer_create_info,
-        staging_buffer, staging_memory))
+        staging_buffer, staging_memory, "spm_staging_buffer"))
     {
         throw std::runtime_error("createVertexIndexBuffer create staging "
             "buffer failed");
@@ -79,7 +79,7 @@ void GESPMBuffer::createVertexIndexBuffer()
     if (!vk->createBuffer(total_size,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT, local_create_info, m_buffer,
-        m_memory))
+        m_memory, "spm_vbo_ibo_buffer"))
         throw std::runtime_error("updateCache create buffer failed");
 
     vk->copyBuffer(staging_buffer, m_buffer, total_size);

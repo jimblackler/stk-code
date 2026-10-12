@@ -13,9 +13,12 @@ GEVulkanAttachmentTexture::GEVulkanAttachmentTexture(GEVulkanDriver* vk,
                                            const core::dimension2d<u32>& size,
                                            VkFormat format,
                                            VkImageUsageFlags iu,
-                                           VkImageAspectFlags ia)
+                                           VkImageAspectFlags ia,
+                                           const char* debug_name)
                          : GEVulkanTexture()
 {
+    if (debug_name)
+        NamedPath.setPath(debug_name);
     m_vk = vk;
     m_vulkan_device = m_vk->getDevice();
     m_image = VK_NULL_HANDLE;
@@ -35,7 +38,7 @@ GEVulkanAttachmentTexture::GEVulkanAttachmentTexture(GEVulkanDriver* vk,
 // ----------------------------------------------------------------------------
 GEVulkanAttachmentTexture* GEVulkanAttachmentTexture::createDepthTexture(
                         GEVulkanDriver* vk, const core::dimension2d<u32>& size,
-                        bool lazy_allocation)
+                        bool lazy_allocation, const char* debug_name)
 {
     std::vector<VkFormat> preferred =
     {
@@ -53,7 +56,7 @@ GEVulkanAttachmentTexture* GEVulkanAttachmentTexture::createDepthTexture(
     else
         iu |= VK_IMAGE_USAGE_SAMPLED_BIT;
     return new GEVulkanAttachmentTexture(vk, size, format, iu,
-        VK_IMAGE_ASPECT_DEPTH_BIT);
+        VK_IMAGE_ASPECT_DEPTH_BIT, debug_name);
 }   // createDepthTexture
 
 }

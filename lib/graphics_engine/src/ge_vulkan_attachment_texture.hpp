@@ -13,7 +13,8 @@ public:
     GEVulkanAttachmentTexture(GEVulkanDriver* vk,
                               const core::dimension2d<u32>& size,
                               VkFormat format, VkImageUsageFlags iu,
-                              VkImageAspectFlags ia);
+                              VkImageAspectFlags ia,
+                              const char* debug_name = "attachment_texture");
     // ------------------------------------------------------------------------
     virtual ~GEVulkanAttachmentTexture()                                     {}
     // ------------------------------------------------------------------------
@@ -54,7 +55,8 @@ public:
     // ------------------------------------------------------------------------
     static GEVulkanAttachmentTexture* createDepthTexture(
                        GEVulkanDriver* vk, const core::dimension2d<u32>& size,
-                       bool lazy_allocation = true);
+                       bool lazy_allocation = true,
+                       const char* debug_name = "depth_attachment_texture");
 
 };   // GEVulkanAttachmentTexture
 
