@@ -141,6 +141,8 @@ void GEVulkanEnvironmentMap::load()
                 "GEVulkanEnvironmentMap::load");
             goto destroy;
         }
+        vk->setObjectName(VK_OBJECT_TYPE_IMAGE_VIEW, view,
+            std::string("env_map_diffuse_mip_view_") + std::to_string(i));
         image_views.push_back(view);
     }
     for (unsigned i = 0; i < specular_levels.size(); i++)
@@ -163,6 +165,8 @@ void GEVulkanEnvironmentMap::load()
                 "GEVulkanEnvironmentMap::load");
             goto destroy;
         }
+        vk->setObjectName(VK_OBJECT_TYPE_IMAGE_VIEW, view,
+            std::string("env_map_specular_mip_view_") + std::to_string(i));
         image_views.push_back(view);
     }
 
@@ -173,6 +177,8 @@ void GEVulkanEnvironmentMap::load()
             "GEVulkanEnvironmentMap::load");
         goto destroy;
     }
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, layout,
+        "env_map_compute_descriptor_layout");
 
     if (vkCreateDescriptorPool(vk->getDevice(), &pool_info, NULL,
         &descriptor_pool) != VK_SUCCESS)
@@ -180,6 +186,8 @@ void GEVulkanEnvironmentMap::load()
         printf("createDescriptorPool for GEVulkanEnvironmentMap::load");
         goto destroy;
     }
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_POOL, descriptor_pool,
+        "env_map_compute_descriptor_pool");
 
     data_layouts.resize(total_levels, layout);
     descriptor_sets.resize(total_levels);
@@ -193,6 +201,11 @@ void GEVulkanEnvironmentMap::load()
         printf("vkAllocateDescriptorSets failed for "
             "GEVulkanEnvironmentMap::load");
         goto destroy;
+    }
+    for (unsigned i = 0; i < descriptor_sets.size(); i++)
+    {
+        vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET, descriptor_sets[i],
+            std::string("env_map_compute_descriptor_set_") + std::to_string(i));
     }
 
     for (VkImageView view : image_views)
@@ -238,6 +251,8 @@ void GEVulkanEnvironmentMap::load()
             "GEVulkanEnvironmentMap::load");
         goto destroy;
     }
+    vk->setObjectName(VK_OBJECT_TYPE_PIPELINE_LAYOUT, pipeline_layout,
+        "env_map_compute_pipeline_layout");
 
     compute_info.stage.module =
         GEVulkanShaderManager::getShader("diffuse_irradiance.comp");
@@ -249,6 +264,8 @@ void GEVulkanEnvironmentMap::load()
             "GEVulkanEnvironmentMap::load");
         goto destroy;
     }
+    vk->setObjectName(VK_OBJECT_TYPE_PIPELINE, diffuse_pipeline,
+        "diffuse_irradiance_compute_pipeline");
 
     compute_info.stage.module =
         GEVulkanShaderManager::getShader("specular_prefilter.comp");
@@ -259,8 +276,11 @@ void GEVulkanEnvironmentMap::load()
             "GEVulkanEnvironmentMap::load");
         goto destroy;
     }
+    vk->setObjectName(VK_OBJECT_TYPE_PIPELINE, specular_pipeline,
+        "specular_prefilter_compute_pipeline");
 
     cmd = GEVulkanCommandLoader::beginSingleTimeCommands();
+    vk->beginDebugLabel(cmd, "Environment Map IBL Compute");
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, diffuse_pipeline);
     for (unsigned i = 0; i < diffuse_levels.size(); i++)
     {
@@ -313,6 +333,7 @@ void GEVulkanEnvironmentMap::load()
         uint32_t dispatch_size = (pc.m_size + 15) / 16;
         vkCmdDispatch(cmd, dispatch_size, dispatch_size, 6);
     }
+    vk->endDebugLabel(cmd);
 
 destroy:
     if (cmd != VK_NULL_HANDLE)

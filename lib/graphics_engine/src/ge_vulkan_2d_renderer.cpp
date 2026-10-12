@@ -90,6 +90,8 @@ void GEVulkan2dRenderer::createPipelineLayout()
 
     if (result != VK_SUCCESS)
         throw std::runtime_error("vkCreatePipelineLayout failed");
+    g_vk->setObjectName(VK_OBJECT_TYPE_PIPELINE_LAYOUT, g_pipeline_layout,
+        "2d_render_pipeline_layout");
 }   // createPipelineLayout
 
 // ----------------------------------------------------------------------------
@@ -255,6 +257,8 @@ void GEVulkan2dRenderer::createGraphicsPipeline()
 
     if (result != VK_SUCCESS)
         throw std::runtime_error("vkCreateGraphicsPipelines failed");
+    g_vk->setObjectName(VK_OBJECT_TYPE_PIPELINE, g_graphics_pipeline,
+        "2d_render_pipeline");
 }   // createGraphicsPipeline
 
 // ----------------------------------------------------------------------------
@@ -262,7 +266,8 @@ void GEVulkan2dRenderer::createTrisBuffers()
 {
     g_tris_buffer = new GEVulkanDynamicBuffer(
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        12000, GEVulkanDriver::getMaxFrameInFlight(), 0);
+        12000, GEVulkanDriver::getMaxFrameInFlight(), 0,
+        true/*enable_host_transfer*/, "2d_render_tris_buffer");
 }   // createTrisBuffers
 
 // ----------------------------------------------------------------------------

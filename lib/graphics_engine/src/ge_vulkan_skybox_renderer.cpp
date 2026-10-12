@@ -54,6 +54,8 @@ GEVulkanSkyBoxRenderer::GEVulkanSkyBoxRenderer()
         throw std::runtime_error("vkCreateDescriptorSetLayout failed for "
             "GEVulkanSkyBoxRenderer::m_env_descriptor_layout");
     }
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+        m_env_descriptor_layout, "skybox_env_descriptor_layout");
 
     // m_descriptor_pool
     VkDescriptorPoolSize pool_size;
@@ -73,6 +75,8 @@ GEVulkanSkyBoxRenderer::GEVulkanSkyBoxRenderer()
         throw std::runtime_error("vkCreateDescriptorPool failed for "
             "GEVulkanSkyBoxRenderer");
     }
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_POOL, m_descriptor_pool,
+        "skybox_env_descriptor_pool");
 
     // m_env_descriptor_set
     std::vector<VkDescriptorSetLayout> layouts(2, m_env_descriptor_layout);
@@ -88,6 +92,10 @@ GEVulkanSkyBoxRenderer::GEVulkanSkyBoxRenderer()
         throw std::runtime_error("vkAllocateDescriptorSets failed for "
             "GEVulkanSkyBoxRenderer::m_env_descriptor_set");
     }
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET, m_env_descriptor_set[0],
+        "skybox_env_descriptor_set_dummy");
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET, m_env_descriptor_set[1],
+        "skybox_env_descriptor_set_active");
 
     std::array<VkDescriptorImageInfo, texture_layout_binding.size()> info;
     info[0].imageLayout = VK_IMAGE_LAYOUT_GENERAL;

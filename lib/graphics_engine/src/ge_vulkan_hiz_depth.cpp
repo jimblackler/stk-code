@@ -80,6 +80,8 @@ void GEVulkanHiZDepth::init()
         throw std::runtime_error("Failed to create descriptor set layout for "
             "HiZ depth");
     }
+    m_vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+        m_descriptor_layout, "hiz_depth_descriptor_layout");
 
     VkPushConstantRange push_constant = {};
     push_constant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
@@ -99,6 +101,8 @@ void GEVulkanHiZDepth::init()
         throw std::runtime_error("Failed to create pipeline layout for HiZ "
             "depth");
     }
+    m_vk->setObjectName(VK_OBJECT_TYPE_PIPELINE_LAYOUT, m_pipeline_layout,
+        "hiz_depth_pipeline_layout");
 
     VkComputePipelineCreateInfo pipeline_info = {};
     pipeline_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -114,6 +118,8 @@ void GEVulkanHiZDepth::init()
         throw std::runtime_error("Failed to create compute pipeline for HiZ "
             "depth");
     }
+    m_vk->setObjectName(VK_OBJECT_TYPE_PIPELINE, m_pipeline,
+        "hiz_depth_compute_pipeline");
 
     // Create descriptor pool
     const uint32_t mip_levels = m_hiz_depth->getMipmapLevels();
@@ -134,6 +140,8 @@ void GEVulkanHiZDepth::init()
     {
         throw std::runtime_error("Failed to create descriptor pool for HiZ depth");
     }
+    m_vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_POOL, m_descriptor_pool,
+        "hiz_depth_descriptor_pool");
 
     // Create descriptor sets for each mip level
     m_descriptor_sets.resize(mip_levels);
@@ -151,6 +159,12 @@ void GEVulkanHiZDepth::init()
     {
         throw std::runtime_error("Failed to allocate descriptor sets for HiZ "
             "depth");
+    }
+    for (uint32_t i = 0; i < m_descriptor_sets.size(); i++)
+    {
+        m_vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET,
+            m_descriptor_sets[i],
+            std::string("hiz_depth_descriptor_set_mip_") + std::to_string(i));
     }
 
     // Create image views for each mip level
@@ -174,6 +188,8 @@ void GEVulkanHiZDepth::init()
             throw std::runtime_error("Failed to create image view for HiZ "
                 "depth");
         }
+        m_vk->setObjectName(VK_OBJECT_TYPE_IMAGE_VIEW, m_hiz_views[i],
+            std::string("hiz_depth_mip_view_") + std::to_string(i));
     }
 
     GEVulkanDeferredFBO* dfbo =
@@ -234,6 +250,8 @@ void GEVulkanHiZDepth::loadRenderingDescriptor()
         throw std::runtime_error("vkCreateDescriptorPool failed for "
             "m_rendering_descriptor_pool in GEVulkanHiZDepth");
     }
+    m_vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_POOL,
+        m_rendering_descriptor_pool, "hiz_depth_rendering_descriptor_pool");
 
     GEVulkanDeferredFBO* dfbo =
         static_cast<GEVulkanDeferredFBO*>(m_vk->getRTTTexture());
@@ -252,6 +270,8 @@ void GEVulkanHiZDepth::loadRenderingDescriptor()
         throw std::runtime_error("vkAllocateDescriptorSets failed for "
             "m_rendering_descriptor_set in GEVulkanHiZDepth");
     }
+    m_vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET,
+        m_rendering_descriptor_set, "hiz_depth_rendering_descriptor_set");
 
     std::array<VkDescriptorImageInfo, displace_binding_count> image_infos = {};
     image_infos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;

@@ -29,7 +29,9 @@ GEVulkanDeferredFBO::GEVulkanDeferredFBO(GEVulkanDriver* vk,
             VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
             VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
             VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
-            VK_IMAGE_ASPECT_COLOR_BIT);
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            i == GVDFT_COLOR ? "deferred_color_attachment" :
+            "deferred_normal_attachment");
     }
     std::vector<VkFormat> hdr_formats =
     {
@@ -44,7 +46,7 @@ GEVulkanDeferredFBO::GEVulkanDeferredFBO(GEVulkanDriver* vk,
         hdr_format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
         VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
-        VK_IMAGE_ASPECT_COLOR_BIT);
+        VK_IMAGE_ASPECT_COLOR_BIT, "deferred_hdr_attachment");
 
     if (!vk->getSeparateRTTTexture() &&
         getGEConfig()->m_auto_deferred_type == GADT_DISPLACE)
@@ -59,7 +61,8 @@ GEVulkanDeferredFBO::GEVulkanDeferredFBO(GEVulkanDriver* vk,
             VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT);
         m_attachments[GVDFT_DISPLACE_MASK] = new GEVulkanAttachmentTexture(vk,
             size, displace_mask_format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-            VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
+            VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
+            "deferred_displace_mask_attachment");
 
         if (getGEConfig()->m_screen_space_reflection_type != GSSRT_DISABLED)
         {
@@ -67,7 +70,8 @@ GEVulkanDeferredFBO::GEVulkanDeferredFBO(GEVulkanDriver* vk,
                 new GEVulkanAttachmentTexture(vk, size,
                 VK_FORMAT_B8G8R8A8_UNORM,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
+                VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
+                "deferred_displace_ssr_attachment");
         }
 
         VkCommandBuffer command_buffer =
@@ -86,7 +90,7 @@ GEVulkanDeferredFBO::GEVulkanDeferredFBO(GEVulkanDriver* vk,
         m_attachments[GVDFT_DISPLACE_COLOR] = new GEVulkanAttachmentTexture(vk,
             size, VK_FORMAT_B8G8R8A8_UNORM,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-            VK_IMAGE_ASPECT_COLOR_BIT);
+            VK_IMAGE_ASPECT_COLOR_BIT, "deferred_displace_color_attachment");
     }
 
     // m_descriptor_layout[GVDFP_HDR]
@@ -114,6 +118,8 @@ GEVulkanDeferredFBO::GEVulkanDeferredFBO(GEVulkanDriver* vk,
         throw std::runtime_error("vkCreateDescriptorSetLayout failed for "
             "GVDFP_HDR in GEVulkanDeferredFBO");
     }
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+        m_descriptor_layout[GVDFP_HDR], "deferred_hdr_descriptor_layout");
 
     // m_descriptor_pool[GVDFP_HDR]
     VkDescriptorPoolSize pool_size;
@@ -132,6 +138,8 @@ GEVulkanDeferredFBO::GEVulkanDeferredFBO(GEVulkanDriver* vk,
         throw std::runtime_error("vkCreateDescriptorPool failed for "
             "GVDFP_HDR in GEVulkanDeferredFBO");
     }
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_POOL,
+        m_descriptor_pool[GVDFP_HDR], "deferred_hdr_descriptor_pool");
 
     // m_descriptor_set[GVDFP_HDR]
     std::vector<VkDescriptorSetLayout> layouts(1,
@@ -149,6 +157,8 @@ GEVulkanDeferredFBO::GEVulkanDeferredFBO(GEVulkanDriver* vk,
         throw std::runtime_error("vkAllocateDescriptorSets failed for "
             "GVDFP_HDR in GEVulkanDeferredFBO");
     }
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET,
+        m_descriptor_set[GVDFP_HDR], "deferred_hdr_descriptor_set");
 
     std::array<VkDescriptorImageInfo, 3> image_infos = {};
     image_infos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -225,6 +235,9 @@ void GEVulkanDeferredFBO::initConvertColorDescriptor(GEVulkanDriver* vk)
         throw std::runtime_error("vkCreateDescriptorSetLayout failed for "
             "GVDFP_CONVERT_COLOR in GEVulkanDeferredFBO");
     }
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+        m_descriptor_layout[GVDFP_CONVERT_COLOR],
+        "deferred_convert_color_descriptor_layout");
 
     // m_descriptor_pool[GVDFP_CONVERT_COLOR]
     VkDescriptorPoolSize pool_size;
@@ -243,6 +256,9 @@ void GEVulkanDeferredFBO::initConvertColorDescriptor(GEVulkanDriver* vk)
         throw std::runtime_error("vkCreateDescriptorPool failed for "
             "GVDFP_CONVERT_COLOR in GEVulkanDeferredFBO");
     }
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_POOL,
+        m_descriptor_pool[GVDFP_CONVERT_COLOR],
+        "deferred_convert_color_descriptor_pool");
 
     // m_descriptor_set[GVDFP_CONVERT_COLOR]
     std::vector<VkDescriptorSetLayout> layouts(1,
@@ -260,6 +276,9 @@ void GEVulkanDeferredFBO::initConvertColorDescriptor(GEVulkanDriver* vk)
         throw std::runtime_error("vkAllocateDescriptorSets failed for "
             "GVDFP_CONVERT_COLOR in GEVulkanDeferredFBO");
     }
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET,
+        m_descriptor_set[GVDFP_CONVERT_COLOR],
+        "deferred_convert_color_descriptor_set");
 
     std::array<VkDescriptorImageInfo, 1> image_infos = {};
     image_infos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -309,6 +328,9 @@ void GEVulkanDeferredFBO::initDisplaceDescriptor(GEVulkanDriver* vk)
         throw std::runtime_error("vkCreateDescriptorSetLayout failed for "
             "GVDFP_DISPLACE_COLOR in GEVulkanDeferredFBO");
     }
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+        m_descriptor_layout[GVDFP_DISPLACE_COLOR],
+        "deferred_displace_descriptor_layout");
 
     int hiz_multi =
         getGEConfig()->m_screen_space_reflection_type <= GSSRT_FAST ? 2 : 1;
@@ -329,6 +351,9 @@ void GEVulkanDeferredFBO::initDisplaceDescriptor(GEVulkanDriver* vk)
         throw std::runtime_error("vkCreateDescriptorPool failed for "
             "GVDFP_DISPLACE_COLOR in GEVulkanDeferredFBO");
     }
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_POOL,
+        m_descriptor_pool[GVDFP_DISPLACE_COLOR],
+        "deferred_displace_descriptor_pool");
 
     // m_descriptor_set[GVDFP_DISPLACE_MASK + GVDFP_DISPLACE_COLOR]
     std::vector<VkDescriptorSetLayout> layouts(hiz_multi,
@@ -347,6 +372,15 @@ void GEVulkanDeferredFBO::initDisplaceDescriptor(GEVulkanDriver* vk)
         throw std::runtime_error("vkAllocateDescriptorSets failed for "
             "GVDFP_DISPLACE_MASK + GVDFP_DISPLACE_COLOR in "
             "GEVulkanDeferredFBO");
+    }
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET,
+        m_descriptor_set[GVDFP_DISPLACE_COLOR],
+        "deferred_displace_color_descriptor_set");
+    if (hiz_multi > 1)
+    {
+        vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET,
+            m_descriptor_set[GVDFP_DISPLACE_MASK],
+            "deferred_displace_mask_descriptor_set");
     }
 
     std::array<VkDescriptorImageInfo, texture_layout_binding.size()>
@@ -400,7 +434,10 @@ void GEVulkanDeferredFBO::initDisplaceDescriptor(GEVulkanDriver* vk)
 void GEVulkanDeferredFBO::createRTT()
 {
     if (!useSwapChainOutput())
+    {
+        NamedPath.setPath("deferred_fbo_output_texture");
         createOutputImage();
+    }
 
     std::array<VkAttachmentDescription, 5> attachment_desc = {};
     // HDR attachment
@@ -594,6 +631,8 @@ void GEVulkanDeferredFBO::createRTT()
     if (vkCreateRenderPass(m_vk->getDevice(), &render_pass_info, NULL,
         &m_rtt_render_pass[0]) != VK_SUCCESS)
         throw std::runtime_error("vkCreateRenderPass failed in createRTT");
+    m_vk->setObjectName(VK_OBJECT_TYPE_RENDER_PASS, m_rtt_render_pass[0],
+        "deferred_hdr_render_pass");
 
     std::vector<std::array<VkImageView, attachment_desc.size()> > attachments(1);
     auto& sciv = m_vk->getSwapChainImageViews();
@@ -632,6 +671,8 @@ void GEVulkanDeferredFBO::createRTT()
         if (vkCreateFramebuffer(m_vk->getDevice(), &framebuffer_info,
             NULL, &m_rtt_frame_buffer[i]) != VK_SUCCESS)
             throw std::runtime_error("vkCreateFramebuffer failed in createRTT");
+        m_vk->setObjectName(VK_OBJECT_TYPE_FRAMEBUFFER, m_rtt_frame_buffer[i],
+            std::string("deferred_hdr_framebuffer_") + std::to_string(i));
     }
 
     if (getAttachment<GVDFT_DISPLACE_COLOR>())
@@ -710,6 +751,9 @@ void GEVulkanDeferredFBO::createDisplacePasses()
         if (vkCreateRenderPass(m_vk->getDevice(), &render_pass_info, NULL,
             &m_rtt_render_pass[GVDFP_DISPLACE_MASK]) != VK_SUCCESS)
             throw std::runtime_error("vkCreateRenderPass failed for GVDFP_DISPLACE_MASK");
+        m_vk->setObjectName(VK_OBJECT_TYPE_RENDER_PASS,
+            m_rtt_render_pass[GVDFP_DISPLACE_MASK],
+            "deferred_displace_mask_render_pass");
     }
 
     // m_rtt_render_pass[GVDFP_DISPLACE_COLOR]
@@ -767,6 +811,9 @@ void GEVulkanDeferredFBO::createDisplacePasses()
         if (vkCreateRenderPass(m_vk->getDevice(), &render_pass_info, NULL,
             &m_rtt_render_pass[GVDFP_DISPLACE_COLOR]) != VK_SUCCESS)
             throw std::runtime_error("vkCreateRenderPass failed for GVDFP_DISPLACE_COLOR");
+        m_vk->setObjectName(VK_OBJECT_TYPE_RENDER_PASS,
+            m_rtt_render_pass[GVDFP_DISPLACE_COLOR],
+            "deferred_displace_color_render_pass");
     }
 
     m_rtt_frame_buffer.resize(GVDFP_COUNT, VK_NULL_HANDLE);
@@ -802,6 +849,9 @@ void GEVulkanDeferredFBO::createDisplacePasses()
         if (vkCreateFramebuffer(m_vk->getDevice(), &framebuffer_info, NULL,
             &m_rtt_frame_buffer[GVDFP_DISPLACE_MASK]) != VK_SUCCESS)
             throw std::runtime_error("vkCreateFramebuffer failed for GVDFP_DISPLACE_MASK");
+        m_vk->setObjectName(VK_OBJECT_TYPE_FRAMEBUFFER,
+            m_rtt_frame_buffer[GVDFP_DISPLACE_MASK],
+            "deferred_displace_mask_framebuffer");
     }
 
     // m_rtt_frame_buffer[GVDFP_DISPLACE_COLOR]
@@ -825,6 +875,9 @@ void GEVulkanDeferredFBO::createDisplacePasses()
         if (vkCreateFramebuffer(m_vk->getDevice(), &framebuffer_info, NULL,
             &m_rtt_frame_buffer[i]) != VK_SUCCESS)
             throw std::runtime_error("vkCreateFramebuffer failed for GVDFP_DISPLACE_COLOR");
+        m_vk->setObjectName(VK_OBJECT_TYPE_FRAMEBUFFER, m_rtt_frame_buffer[i],
+            std::string("deferred_displace_color_framebuffer_") +
+            std::to_string(i - GVDFP_DISPLACE_COLOR));
     }
 }   // createDisplacePasses
 
