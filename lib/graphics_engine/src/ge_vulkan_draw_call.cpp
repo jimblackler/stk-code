@@ -1313,6 +1313,8 @@ void GEVulkanDrawCall::createPipeline(GEVulkanDriver* vk,
         std::string key = s.m_shader_name;
         if (skinning)
             key += SKINNING_PIPELINE;
+        vk->setObjectName(VK_OBJECT_TYPE_PIPELINE, p,
+            std::string("pipeline_") + key + (depth_only ? "_depth" : ""));
         if (m_graphics_pipelines.find(key) == m_graphics_pipelines.end())
         {
             m_graphics_pipelines[key] = {};
@@ -1476,6 +1478,8 @@ void GEVulkanDrawCall::createVulkanData()
         throw std::runtime_error("vkCreateDescriptorSetLayout failed for data "
             "layout");
     }
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, m_data_layout,
+        "draw_call_data_descriptor_layout");
 
     // m_descriptor_pool
     std::vector<VkDescriptorPoolSize> sizes =
@@ -1502,6 +1506,8 @@ void GEVulkanDrawCall::createVulkanData()
     if (vkCreateDescriptorPool(vk->getDevice(), &pool_info, NULL,
         &m_descriptor_pool) != VK_SUCCESS)
         throw std::runtime_error("createDescriptorPool failed");
+    vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_POOL, m_descriptor_pool,
+        "draw_call_descriptor_pool");
 
     // m_data_descriptor_sets
     unsigned set_size = vk->getMaxFrameInFlight() + 1;
@@ -1520,6 +1526,12 @@ void GEVulkanDrawCall::createVulkanData()
     {
         throw std::runtime_error("vkAllocateDescriptorSets failed for data "
             "layout");
+    }
+    for (unsigned i = 0; i < m_data_descriptor_sets.size(); i++)
+    {
+        vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET,
+            m_data_descriptor_sets[i],
+            std::string("draw_call_data_descriptor_set_") + std::to_string(i));
     }
 
     // m_pipeline_layout
@@ -1565,6 +1577,8 @@ void GEVulkanDrawCall::createVulkanData()
         throw std::runtime_error(
             "vkCreatePipelineLayout failed for m_pipeline_layout");
     }
+    vk->setObjectName(VK_OBJECT_TYPE_PIPELINE_LAYOUT, m_pipeline_layout,
+        "draw_call_pipeline_layout");
 
     all_layouts.resize(2);
     all_layouts[0] = vk->getSkyBoxRenderer()->getEnvDescriptorSetLayout();
@@ -1578,6 +1592,8 @@ void GEVulkanDrawCall::createVulkanData()
         throw std::runtime_error(
             "vkCreatePipelineLayout failed for m_skybox_layout");
     }
+    vk->setObjectName(VK_OBJECT_TYPE_PIPELINE_LAYOUT, m_skybox_layout,
+        "draw_call_skybox_pipeline_layout");
 
     if (vk->getRTTTexture() && vk->getRTTTexture()->isDeferredFBO())
     {
@@ -1598,6 +1614,10 @@ void GEVulkanDrawCall::createVulkanData()
             throw std::runtime_error(
                 "vkCreatePipelineLayout failed for m_deferred_layouts");
         }
+        vk->setObjectName(VK_OBJECT_TYPE_PIPELINE_LAYOUT,
+            m_deferred_layouts[i],
+            std::string("draw_call_deferred_pipeline_layout_") +
+            std::to_string(i));
     }
     createAllPipelines(vk);
 
@@ -1616,14 +1636,15 @@ void GEVulkanDrawCall::createVulkanData()
         extra_size + getLightDataOffset() + sizeof(GEGlobalLightBuffer),
         GEVulkanDriver::getMaxFrameInFlight() + 1,
         GEVulkanDynamicBuffer::supportsHostTransfer() ? 0 :
-        GEVulkanDriver::getMaxFrameInFlight() + 1);
+        GEVulkanDriver::getMaxFrameInFlight() + 1,
+        true/*enable_host_transfer*/, "draw_call_dynamic_ubo");
 
     flags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
     // Using VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
     // will be a lot slower when there are many objects (like particles)
     m_sbo_data = new GEVulkanDynamicBuffer(flags, getInitialSBOSize(),
         GEVulkanDriver::getMaxFrameInFlight() + 1, 0,
-        false/*enable_host_transfer*/);
+        false/*enable_host_transfer*/, "draw_call_sbo");
 }   // createVulkanData
 
 // ----------------------------------------------------------------------------
@@ -2135,6 +2156,7 @@ bool GEVulkanDrawCall::renderSkyBox(GEVulkanDriver* vk, VkCommandBuffer cmd)
 {
     if (!m_skybox_renderer)
         return false;
+    vk->insertDebugLabel(cmd, "Draw SkyBox");
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
         *m_graphics_pipelines["skybox"].m_pipelines[GVPT_SKYBOX].get());
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -2156,6 +2178,7 @@ void GEVulkanDrawCall::renderDeferredLighting(GEVulkanDriver* vk,
 {
     if (m_deferred_layouts.empty())
         return;
+    vk->insertDebugLabel(cmd, "Draw Deferred PBR Lighting");
     auto& pl = m_graphics_pipelines.at("deferred_pbr").m_pipelines;
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
         *pl[GVPT_DEFERRED_LIGHTING]);
@@ -2181,6 +2204,7 @@ void GEVulkanDrawCall::renderDeferredLighting(GEVulkanDriver* vk,
     if (m_light_handler &&
         m_light_handler->getLightCount() - fullscreen_light > 0)
     {
+        vk->insertDebugLabel(cmd, "Draw Deferred Point Lights");
         auto& pl = m_graphics_pipelines.at("deferred_pointlight")
             .m_pipelines;
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -2207,6 +2231,7 @@ void GEVulkanDrawCall::renderDeferredConvertColor(GEVulkanDriver* vk,
 {
     if (m_deferred_layouts.empty())
         return;
+    vk->insertDebugLabel(cmd, "Draw Deferred Convert Color");
     auto& pl = m_graphics_pipelines.at("deferred_convert_color").m_pipelines;
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
         *pl[GVPT_DEFERRED_CONVERT_COLOR]);
@@ -2223,6 +2248,7 @@ void GEVulkanDrawCall::renderDisplaceColor(GEVulkanDriver* vk,
 {
     if (m_deferred_layouts.empty())
         return;
+    vk->insertDebugLabel(cmd, "Draw Displace Color");
     auto& pl = m_graphics_pipelines.at("displace_color").m_pipelines;
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
         *pl[GVPT_DISPLACE_COLOR]);
@@ -2397,6 +2423,7 @@ bool GEVulkanDrawCall::bindPipeline(VkCommandBuffer cmd,
     if (*prev_pipeline == p)
         return true;
     *prev_pipeline = p;
+    getVKDriver()->insertDebugLabel(cmd, name.c_str());
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p);
     if (ret.m_settings.m_material->m_push_constants)
     {
