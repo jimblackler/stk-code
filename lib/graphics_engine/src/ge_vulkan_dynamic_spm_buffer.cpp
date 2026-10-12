@@ -14,9 +14,11 @@ GEVulkanDynamicSPMBuffer::GEVulkanDynamicSPMBuffer()
 {
     unsigned frame_count = GEVulkanDriver::getMaxFrameInFlight() + 1;
     m_vertex_buffer = new GEVulkanDynamicBuffer(
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 100, frame_count, 0);
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 100, frame_count, 0,
+        true/*enable_host_transfer*/, "dynamic_spm_vertex_buffer");
     m_index_buffer = new GEVulkanDynamicBuffer(
-        VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 100, frame_count, 0);
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 100, frame_count, 0,
+        true/*enable_host_transfer*/, "dynamic_spm_index_buffer");
     m_vk = getVKDriver();
     m_vk->addDynamicSPMBuffer(this);
     m_vertex_update_offsets = new uint32_t[frame_count]();

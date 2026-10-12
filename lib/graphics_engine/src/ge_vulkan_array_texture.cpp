@@ -72,7 +72,9 @@ GEVulkanArrayTexture::ThreadLoader::~ThreadLoader()
 
     if (!vk->createBuffer(image_total_size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT, staging_buffer_create_info,
-        staging_buffer, staging_buffer_allocation))
+        staging_buffer, staging_buffer_allocation,
+        (std::string(m_texture->NamedPath.getPtr()) +
+        "_staging_buffer").c_str()))
     {
         goto destroy;
     }
@@ -221,6 +223,7 @@ GEVulkanArrayTexture::GEVulkanArrayTexture(const std::vector<io::path>& list,
     if (list.empty())
         throw std::runtime_error("empty texture list for array texture");
 
+    NamedPath.setPath((std::string("array_texture_") + list[0].c_str()).c_str());
     m_layer_count = list.size();
     m_image_view_type = type;
     m_vk = getVKDriver();
@@ -301,6 +304,8 @@ GEVulkanArrayTexture::GEVulkanArrayTexture(VkFormat internal_format,
                                            video::SColor unicolor,
                                            VkImageLayout first_layout)
 {
+    NamedPath.setPath(type == VK_IMAGE_VIEW_TYPE_CUBE ?
+        "storage_cubemap_texture" : "storage_array_texture");
     m_layer_count = layer_count;
     m_image_view_type = type;
     m_vk = getVKDriver();

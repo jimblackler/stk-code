@@ -55,6 +55,8 @@ GEVulkanTextureDescriptor::GEVulkanTextureDescriptor(unsigned max_texture_list,
         throw std::runtime_error("vkCreateDescriptorSetLayout failed for "
             "GEVulkanTextureDescriptor");
     }
+    m_vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+        m_descriptor_set_layout, "texture_descriptor_set_layout");
 
     // m_descriptor_pool
     VkDescriptorPoolSize pool_size;
@@ -73,6 +75,8 @@ GEVulkanTextureDescriptor::GEVulkanTextureDescriptor(unsigned max_texture_list,
         throw std::runtime_error("vkCreateDescriptorPool failed for "
             "GEVulkanTextureDescriptor");
     }
+    m_vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_POOL, m_descriptor_pool,
+        "texture_descriptor_pool");
 
     // m_descriptor_sets
     if (single_descriptor)
@@ -93,6 +97,12 @@ GEVulkanTextureDescriptor::GEVulkanTextureDescriptor(unsigned max_texture_list,
     {
         throw std::runtime_error("vkAllocateDescriptorSets failed for "
             "GEVulkanTextureDescriptor");
+    }
+    for (unsigned i = 0; i < m_descriptor_sets.size(); i++)
+    {
+        m_vk->setObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET,
+            m_descriptor_sets[i],
+            std::string("texture_descriptor_set_") + std::to_string(i));
     }
 
     m_sampler_use = GVS_NEAREST;
@@ -153,19 +163,26 @@ void GEVulkanTextureDescriptor::updateDescriptor()
     m_vk->waitIdle();
     if (single_descriptor)
     {
-        VkWriteDescriptorSet write_descriptor_set = {};
-        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write_descriptor_set.dstBinding = m_binding;
-        write_descriptor_set.dstArrayElement = 0;
-        write_descriptor_set.descriptorType =
-            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        write_descriptor_set.descriptorCount = m_max_texture_list * m_max_layer;
-        write_descriptor_set.pBufferInfo = 0;
-        write_descriptor_set.dstSet = m_descriptor_sets[0];
-        write_descriptor_set.pImageInfo = image_infos.data();
+        const unsigned total_descriptors = m_max_texture_list * m_max_layer;
+        const unsigned max_descriptors_per_update = 128;
+        for (unsigned offset = 0; offset < total_descriptors;
+             offset += max_descriptors_per_update)
+        {
+            VkWriteDescriptorSet write_descriptor_set = {};
+            write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write_descriptor_set.dstBinding = m_binding;
+            write_descriptor_set.dstArrayElement = offset;
+            write_descriptor_set.descriptorType =
+                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            write_descriptor_set.descriptorCount = std::min(
+                max_descriptors_per_update, total_descriptors - offset);
+            write_descriptor_set.pBufferInfo = 0;
+            write_descriptor_set.dstSet = m_descriptor_sets[0];
+            write_descriptor_set.pImageInfo = &image_infos[offset];
 
-        vkUpdateDescriptorSets(m_vk->getDevice(), 1, &write_descriptor_set, 0,
-            NULL);
+            vkUpdateDescriptorSets(m_vk->getDevice(), 1, &write_descriptor_set,
+                0, NULL);
+        }
     }
     else
     {
@@ -185,8 +202,15 @@ void GEVulkanTextureDescriptor::updateDescriptor()
             write_descriptor_set.pImageInfo = &image_infos[i];
             all_sets.push_back(write_descriptor_set);
         }
-        vkUpdateDescriptorSets(m_vk->getDevice(), all_sets.size(),
-            all_sets.data(), 0, NULL);
+        const size_t max_sets_per_update = 16;
+        for (size_t offset = 0; offset < all_sets.size();
+             offset += max_sets_per_update)
+        {
+            const size_t count =
+                std::min(max_sets_per_update, all_sets.size() - offset);
+            vkUpdateDescriptorSets(m_vk->getDevice(), count,
+                &all_sets[offset], 0, NULL);
+        }
     }
 }   // updateDescriptor
 

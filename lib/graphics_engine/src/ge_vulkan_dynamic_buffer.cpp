@@ -15,9 +15,11 @@ GEVulkanDynamicBuffer::GEVulkanDynamicBuffer(VkBufferUsageFlags usage,
                                              size_t initial_size,
                                              unsigned host_buffer_size,
                                              unsigned local_buffer_size,
-                                             bool enable_host_transfer)
+                                             bool enable_host_transfer,
+                                             const char* debug_name)
                      : m_usage(usage),
-                       m_enable_host_transfer(enable_host_transfer)
+                       m_enable_host_transfer(enable_host_transfer),
+                       m_debug_name(debug_name ? debug_name : "dynamic_buffer")
 {
     m_size = m_real_size = initial_size;
 
@@ -62,8 +64,9 @@ start:
         host_info.usage = VMA_MEMORY_USAGE_AUTO;
     }
 
+    std::string host_name = m_debug_name + "_host_" + std::to_string(frame);
     if (!vk->createBuffer(m_size, m_usage | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        host_info, host_buffer, host_memory))
+        host_info, host_buffer, host_memory, host_name.c_str()))
     {
         vmaDestroyBuffer(vk->getVmaAllocator(), host_buffer, host_memory);
         return;
@@ -104,8 +107,9 @@ void GEVulkanDynamicBuffer::initLocalBuffer(unsigned frame)
     VkBufferUsageFlags flags = m_usage;
     if (!m_host_buffer.empty())
         flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    std::string local_name = m_debug_name + "_local_" + std::to_string(frame);
     if (!vk->createBuffer(m_size, flags, local_info, local_buffer,
-        local_memory))
+        local_memory, local_name.c_str()))
     {
         vmaDestroyBuffer(vk->getVmaAllocator(), local_buffer, local_memory);
         return;

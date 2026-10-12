@@ -4,6 +4,7 @@
 #include "vulkan_wrapper.h"
 #include "ge_vma.hpp"
 
+#include <string>
 #include <vector>
 #include <utility>
 
@@ -25,6 +26,8 @@ private:
 
     const bool m_enable_host_transfer;
 
+    std::string m_debug_name;
+
     static int m_supports_host_transfer;
     // ------------------------------------------------------------------------
     void initHostBuffer(unsigned frame, bool with_transfer);
@@ -37,7 +40,8 @@ public:
     GEVulkanDynamicBuffer(VkBufferUsageFlags usage, size_t initial_size,
                           unsigned host_buffer_size,
                           unsigned local_buffer_size,
-                          bool enable_host_transfer = true);
+                          bool enable_host_transfer = true,
+                          const char* debug_name = "dynamic_buffer");
     // ------------------------------------------------------------------------
     ~GEVulkanDynamicBuffer();
     // ------------------------------------------------------------------------
