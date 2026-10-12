@@ -596,6 +596,25 @@ GEVulkanDriver::GEVulkanDriver(const SIrrlichtCreationParameters& params,
     }
 #endif
 
+    setObjectName(VK_OBJECT_TYPE_INSTANCE, m_vk->instance,
+        "GEVulkanDriver::instance");
+    setObjectName(VK_OBJECT_TYPE_PHYSICAL_DEVICE, m_physical_device,
+        m_properties.deviceName);
+    setObjectName(VK_OBJECT_TYPE_DEVICE, m_vk->device,
+        "GEVulkanDriver::device");
+    setObjectName(VK_OBJECT_TYPE_SURFACE_KHR, m_vk->surface,
+        "GEVulkanDriver::surface");
+    for (unsigned i = 0; i < m_graphics_queue_count; i++)
+    {
+        setObjectName(VK_OBJECT_TYPE_QUEUE, m_graphics_queue[i],
+            "graphics_queue_" + std::to_string(i));
+    }
+    if (m_present_queue != VK_NULL_HANDLE)
+    {
+        setObjectName(VK_OBJECT_TYPE_QUEUE, m_present_queue,
+            "present_queue");
+    }
+
     VmaAllocatorCreateInfo allocator_create_info = {};
     allocator_create_info.physicalDevice = m_physical_device;
     allocator_create_info.device = m_vk->device;
@@ -760,25 +779,32 @@ void GEVulkanDriver::createInstance(SDL_Window* window)
         vk_version >= VK_API_VERSION_1_1);
 #endif
 
-    if (vk_version < VK_API_VERSION_1_1)
+    uint32_t extension_count = 0;
+    vkEnumerateInstanceExtensionProperties(NULL, &extension_count, NULL);
+    std::vector<VkExtensionProperties> instance_extensions(extension_count);
+    if (extension_count > 0)
     {
-        uint32_t extension_count;
-        vkEnumerateInstanceExtensionProperties(NULL, &extension_count, NULL);
-
-        std::vector<VkExtensionProperties> instance_extensions(extension_count);
         vkEnumerateInstanceExtensionProperties(NULL, &extension_count,
             &instance_extensions[0]);
-        for (auto& ext : instance_extensions)
+    }
+    bool has_debug_utils = false;
+    for (auto& ext : instance_extensions)
+    {
+        if (vk_version < VK_API_VERSION_1_1 &&
+            strcmp(ext.extensionName,
+            VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0)
         {
-            if (strcmp(ext.extensionName,
-                VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0)
-            {
-                extensions.push_back(
-                    VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-                break;
-            }
+            extensions.push_back(
+                VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        }
+        else if (strcmp(ext.extensionName,
+            VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
+        {
+            has_debug_utils = true;
         }
     }
+    if (has_debug_utils)
+        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
     uint32_t layer_count = 0;
     vkEnumerateInstanceLayerProperties(&layer_count, NULL);
@@ -810,7 +836,8 @@ void GEVulkanDriver::createInstance(SDL_Window* window)
         enabled_validation_features.size();
 
     next_chain = &validation_features;
-    extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    if (!has_debug_utils)
+        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
 
 #if defined(__APPLE__)
@@ -1323,6 +1350,8 @@ found_mode:
 
     if (result != VK_SUCCESS)
         throw std::runtime_error("vkCreateSwapchainKHR failed");
+    setObjectName(VK_OBJECT_TYPE_SWAPCHAIN_KHR, m_vk->swap_chain,
+        "swap_chain");
 
     vkGetSwapchainImagesKHR(m_vk->device, m_vk->swap_chain, &swap_chain_images_count, NULL);
     m_vk->swap_chain_images.resize(swap_chain_images_count);
@@ -1332,6 +1361,9 @@ found_mode:
     m_swap_chain_image_format = surface_format.format;
     for (unsigned int i = 0; i < m_vk->swap_chain_images.size(); i++)
     {
+        setObjectName(VK_OBJECT_TYPE_IMAGE, m_vk->swap_chain_images[i],
+            "swap_chain_image_" + std::to_string(i));
+
         VkImageViewCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         create_info.image = m_vk->swap_chain_images[i];
@@ -1353,6 +1385,8 @@ found_mode:
 
         if (result != VK_SUCCESS)
             throw std::runtime_error("vkCreateImageView failed");
+        setObjectName(VK_OBJECT_TYPE_IMAGE_VIEW, swap_chain_image_view,
+            "swap_chain_image_view_" + std::to_string(i));
         m_vk->swap_chain_image_views.push_back(swap_chain_image_view);
     }
 
@@ -1401,6 +1435,8 @@ void GEVulkanDriver::createSyncObjects()
             throw std::runtime_error(
                 "vkCreateSemaphore on image_available_semaphore failed");
         }
+        setObjectName(VK_OBJECT_TYPE_SEMAPHORE, image_available_semaphore,
+            "image_available_semaphore_" + std::to_string(i));
 
         VkSemaphore render_finished_semaphore;
         result = vkCreateSemaphore(m_vk->device, &semaphore_info, NULL,
@@ -1411,6 +1447,8 @@ void GEVulkanDriver::createSyncObjects()
             throw std::runtime_error(
                 "vkCreateSemaphore on render_finished_semaphore failed");
         }
+        setObjectName(VK_OBJECT_TYPE_SEMAPHORE, render_finished_semaphore,
+            "render_finished_semaphore_" + std::to_string(i));
         m_vk->image_available_semaphores.push_back(image_available_semaphore);
         m_vk->render_finished_semaphores.push_back(render_finished_semaphore);
     }
@@ -1423,6 +1461,8 @@ void GEVulkanDriver::createSyncObjects()
 
         if (result != VK_SUCCESS)
             throw std::runtime_error("vkCreateFence failed");
+        setObjectName(VK_OBJECT_TYPE_FENCE, in_flight_fence,
+            "in_flight_fence_" + std::to_string(i));
 
         m_vk->in_flight_fences.push_back(in_flight_fence);
     }
@@ -1442,6 +1482,8 @@ void GEVulkanDriver::createCommandBuffers()
             NULL, &m_vk->command_pools[i]);
         if (result != VK_SUCCESS)
             throw std::runtime_error("vkCreateCommandPool failed");
+        setObjectName(VK_OBJECT_TYPE_COMMAND_POOL, m_vk->command_pools[i],
+            "frame_command_pool_" + std::to_string(i));
 
         VkCommandBufferAllocateInfo alloc_info = {};
         alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -1453,6 +1495,8 @@ void GEVulkanDriver::createCommandBuffers()
             &m_vk->command_buffers[i]);
         if (result != VK_SUCCESS)
             throw std::runtime_error("vkAllocateCommandBuffers failed");
+        setObjectName(VK_OBJECT_TYPE_COMMAND_BUFFER, m_vk->command_buffers[i],
+            "frame_command_buffer_" + std::to_string(i));
     }
 }   // createCommandBuffers
 
@@ -1482,6 +1526,7 @@ void GEVulkanDriver::createSamplers()
 
     if (result != VK_SUCCESS)
         throw std::runtime_error("vkCreateSampler failed for GVS_NEAREST");
+    setObjectName(VK_OBJECT_TYPE_SAMPLER, sampler, "sampler_nearest");
     m_vk->samplers[GVS_NEAREST] = sampler;
 
     // GVS_SKYBOX
@@ -1497,6 +1542,7 @@ void GEVulkanDriver::createSamplers()
 
     if (result != VK_SUCCESS)
         throw std::runtime_error("vkCreateSampler failed for GVS_SKYBOX");
+    setObjectName(VK_OBJECT_TYPE_SAMPLER, sampler, "sampler_skybox");
     m_vk->samplers[GVS_SKYBOX] = sampler;
 
     const float max_aniso = m_properties.limits.maxSamplerAnisotropy;
@@ -1514,6 +1560,7 @@ void GEVulkanDriver::createSamplers()
         throw std::runtime_error(
             "vkCreateSampler failed for GVS_3D_MESH_MIPMAP_2");
     }
+    setObjectName(VK_OBJECT_TYPE_SAMPLER, sampler, "sampler_3d_mesh_mipmap_2");
     m_vk->samplers[GVS_3D_MESH_MIPMAP_2] = sampler;
 
     // GVS_3D_MESH_MIPMAP_4
@@ -1526,6 +1573,7 @@ void GEVulkanDriver::createSamplers()
         throw std::runtime_error(
             "vkCreateSampler failed for GVS_3D_MESH_MIPMAP_4");
     }
+    setObjectName(VK_OBJECT_TYPE_SAMPLER, sampler, "sampler_3d_mesh_mipmap_4");
     m_vk->samplers[GVS_3D_MESH_MIPMAP_4] = sampler;
 
     // GVS_3D_MESH_MIPMAP_16
@@ -1538,6 +1586,7 @@ void GEVulkanDriver::createSamplers()
         throw std::runtime_error(
             "vkCreateSampler failed for GVS_3D_MESH_MIPMAP_16");
     }
+    setObjectName(VK_OBJECT_TYPE_SAMPLER, sampler, "sampler_3d_mesh_mipmap_16");
     m_vk->samplers[GVS_3D_MESH_MIPMAP_16] = sampler;
 
     // GVS_2D_RENDER
@@ -1552,6 +1601,7 @@ void GEVulkanDriver::createSamplers()
 
     if (result != VK_SUCCESS)
         throw std::runtime_error("vkCreateSampler failed for GVS_2D_RENDER");
+    setObjectName(VK_OBJECT_TYPE_SAMPLER, sampler, "sampler_2d_render");
     m_vk->samplers[GVS_2D_RENDER] = sampler;
 
     sampler_info.anisotropyEnable = false;
@@ -1567,6 +1617,7 @@ void GEVulkanDriver::createSamplers()
 
     if (result != VK_SUCCESS)
         throw std::runtime_error("vkCreateSampler failed for GVS_SHADOW");
+    setObjectName(VK_OBJECT_TYPE_SAMPLER, sampler, "sampler_shadow");
     m_vk->samplers[GVS_SHADOW] = sampler;
 }   // createSamplers
 
@@ -1649,6 +1700,8 @@ void GEVulkanDriver::createRenderPass()
 
     if (result != VK_SUCCESS)
         throw std::runtime_error("vkCreateRenderPass failed");
+    setObjectName(VK_OBJECT_TYPE_RENDER_PASS, m_vk->render_pass,
+        "main_render_pass");
 }   // createRenderPass
 
 // ----------------------------------------------------------------------------
@@ -1683,6 +1736,8 @@ void GEVulkanDriver::createFramebuffers()
             NULL, &swap_chain_framebuffer);
         if (result != VK_SUCCESS)
             throw std::runtime_error("vkCreateFramebuffer failed");
+        setObjectName(VK_OBJECT_TYPE_FRAMEBUFFER, swap_chain_framebuffer,
+            "swap_chain_framebuffer_" + std::to_string(i));
 
         m_vk->swap_chain_framebuffers.push_back(swap_chain_framebuffer);
     }
@@ -1693,7 +1748,8 @@ void GEVulkanDriver::createFramebuffers()
 bool GEVulkanDriver::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
                                   VmaAllocationCreateInfo& alloc_create_info,
                                   VkBuffer& buffer,
-                                  VmaAllocation& buffer_allocation)
+                                  VmaAllocation& buffer_allocation,
+                                  const char* debug_name)
 {
     VkBufferCreateInfo buffer_info = {};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1701,9 +1757,14 @@ bool GEVulkanDriver::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
     buffer_info.usage = usage;
     buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    return vmaCreateBuffer(m_vk->allocator,
-        &buffer_info, &alloc_create_info, &buffer, &buffer_allocation, NULL) ==
-        VK_SUCCESS;
+    if (vmaCreateBuffer(m_vk->allocator,
+        &buffer_info, &alloc_create_info, &buffer, &buffer_allocation, NULL) !=
+        VK_SUCCESS)
+        return false;
+
+    if (debug_name)
+        setObjectName(VK_OBJECT_TYPE_BUFFER, buffer, debug_name);
+    return true;
 }   // createBuffer
 
 // ----------------------------------------------------------------------------
@@ -2406,6 +2467,8 @@ void GEVulkanDriver::createSwapChainRelated(bool handle_surface)
     {
         if (SDL_Vulkan_CreateSurface(m_params.m_sdl_window, m_vk->instance, &m_vk->surface) == SDL_FALSE)
             throw std::runtime_error("SDL_Vulkan_CreateSurface failed");
+        setObjectName(VK_OBJECT_TYPE_SURFACE_KHR, m_vk->surface,
+            "GEVulkanDriver::surface");
     }
     updateSurfaceInformation(m_physical_device, &m_surface_capabilities,
         &m_surface_formats, &m_present_modes);
@@ -2489,24 +2552,27 @@ void GEVulkanDriver::buildCommandBuffers()
         render_pass_info.renderArea.extent = getSwapChainExtent();
     }
 
+    VkCommandBuffer cmd = getCurrentCommandBuffer();
     VkCommandBufferBeginInfo begin_info = {};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-    VkResult result = vkBeginCommandBuffer(getCurrentCommandBuffer(),
-        &begin_info);
+    VkResult result = vkBeginCommandBuffer(cmd, &begin_info);
     if (result != VK_SUCCESS)
         return;
 
+    beginDebugLabel(cmd, "Upload 2D & Dynamic Buffers");
     GEVulkan2dRenderer::uploadTrisBuffers();
     for (auto& p : static_cast<GEVulkanSceneManager*>(
         m_irrlicht_device->getSceneManager())->getDrawCalls())
     {
         p.second->uploadDynamicData(this, p.first);
     }
+    endDebugLabel(cmd);
 
-    vkCmdBeginRenderPass(getCurrentCommandBuffer(), &render_pass_info,
-        VK_SUBPASS_CONTENTS_INLINE);
+    beginDebugLabel(cmd, m_rtt_texture ? "3D Scene Rendering (RTT)" :
+        "3D Scene Rendering");
+    vkCmdBeginRenderPass(cmd, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
     std::vector<std::pair<GEVulkanDrawCall*, GEVulkanCameraSceneNode*> > dcs;
     for (auto& p : static_cast<GEVulkanSceneManager*>(
@@ -2514,25 +2580,30 @@ void GEVulkanDriver::buildCommandBuffers()
     {
         dcs.emplace_back(p.second.get(), p.first);
     }
-    renderDrawCalls(dcs, getCurrentCommandBuffer());
+    renderDrawCalls(dcs, cmd);
 
     if (m_rtt_texture && !m_rtt_texture->useSwapChainOutput())
     {
-        vkCmdEndRenderPass(getCurrentCommandBuffer());
+        vkCmdEndRenderPass(cmd);
+        endDebugLabel(cmd);
+        beginDebugLabel(cmd, "Main Swapchain RenderPass");
         // No depth buffer in main framebuffer if RTT is used
         render_pass_info.clearValueCount = 1;
         render_pass_info.renderPass = getRenderPass();
         render_pass_info.framebuffer =
             getSwapChainFramebuffers()[getCurrentImageIndex()];
         render_pass_info.renderArea.extent = getSwapChainExtent();
-        vkCmdBeginRenderPass(getCurrentCommandBuffer(), &render_pass_info,
+        vkCmdBeginRenderPass(cmd, &render_pass_info,
             VK_SUBPASS_CONTENTS_INLINE);
     }
 
+    beginDebugLabel(cmd, "2D UI Renderer");
     GEVulkan2dRenderer::render();
+    endDebugLabel(cmd);
 
-    vkCmdEndRenderPass(getCurrentCommandBuffer());
-    vkEndCommandBuffer(getCurrentCommandBuffer());
+    vkCmdEndRenderPass(cmd);
+    endDebugLabel(cmd);
+    vkEndCommandBuffer(cmd);
 
     handleDeletedTextures();
 }   // buildCommandBuffers
@@ -2558,6 +2629,7 @@ void GEVulkanDriver::renderDrawCalls(
         render_pass_info.renderArea.extent = {
             m_rtt_texture->getSize().Width, m_rtt_texture->getSize().Height };
 
+        beginDebugLabel(cmd, "Subpass 0: Deferred G-Buffer");
         for (auto& q : p)
         {
             if (bind_mesh_textures)
@@ -2574,7 +2646,9 @@ void GEVulkanDriver::renderDrawCalls(
             q.first->renderPipeline(this, cmd, GVPT_SOLID, rebind_base_vertex);
             PrimitivesDrawn += q.first->getPolyCount();
         }
+        endDebugLabel(cmd);
         vkCmdNextSubpass(cmd, VK_SUBPASS_CONTENTS_INLINE);
+        beginDebugLabel(cmd, "Subpass 1: Deferred Lighting & Skybox");
         for (auto& q : p)
         {
             if (multiple_viewports)
@@ -2582,7 +2656,9 @@ void GEVulkanDriver::renderDrawCalls(
             q.first->renderDeferredLighting(this, cmd);
             q.first->renderSkyBox(this, cmd);
         }
+        endDebugLabel(cmd);
         vkCmdNextSubpass(cmd, VK_SUBPASS_CONTENTS_INLINE);
+        beginDebugLabel(cmd, "Subpass 2: Convert Color & Transparent");
         for (auto& q : p)
         {
             if (multiple_viewports)
@@ -2597,6 +2673,7 @@ void GEVulkanDriver::renderDrawCalls(
             q.first->renderPipeline(this, cmd, GVPT_TRANSPARENT,
                 rebind_base_vertex);
         }
+        endDebugLabel(cmd);
         if (dfbo->getAttachment<GVDFT_DISPLACE_COLOR>())
         {
             bool has_displace = false;
@@ -2612,12 +2689,15 @@ void GEVulkanDriver::renderDrawCalls(
             if (has_displace)
             {
                 vkCmdEndRenderPass(cmd);
+                beginDebugLabel(cmd, "HiZ Depth Generation");
                 for (auto& q : p)
                 {
                     GEVulkanHiZDepth* hiz = q.first->getHiZDepth();
                     if (hiz)
                         hiz->generate(cmd);
                 }
+                endDebugLabel(cmd);
+                beginDebugLabel(cmd, "Displace Mask Pass");
                 render_pass_info.clearValueCount = m_rtt_texture
                     ->getZeroClearCountForPass(GVDFP_DISPLACE_MASK);
                 render_pass_info.renderPass = m_rtt_texture
@@ -2637,8 +2717,10 @@ void GEVulkanDriver::renderDrawCalls(
                     q.first->renderPipeline(this, cmd, GVPT_DISPLACE_MASK,
                         rebind_base_vertex);
                 }
+                endDebugLabel(cmd);
             }
             vkCmdEndRenderPass(cmd);
+            beginDebugLabel(cmd, "Displace Color Pass");
             render_pass_info.clearValueCount =
                 m_rtt_texture->getZeroClearCountForPass(GVDFP_DISPLACE_COLOR);
             render_pass_info.renderPass =
@@ -2671,10 +2753,12 @@ void GEVulkanDriver::renderDrawCalls(
                         rebind_base_vertex);
                 }
             }
+            endDebugLabel(cmd);
         }
     }
     else
     {
+        beginDebugLabel(cmd, "Forward Scene Pass");
         for (auto& q : p)
         {
             if (bind_mesh_textures)
@@ -2702,6 +2786,7 @@ void GEVulkanDriver::renderDrawCalls(
                 rebind_base_vertex);
             PrimitivesDrawn += q.first->getPolyCount();
         }
+        endDebugLabel(cmd);
     }
 }   // renderDrawCalls
 
