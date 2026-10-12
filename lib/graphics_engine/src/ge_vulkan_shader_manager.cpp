@@ -271,6 +271,7 @@ VkShaderModule GEVulkanShaderManager::loadShader(shaderc_shader_kind kind,
         throw std::runtime_error(
             std::string("vkCreateShaderModule failed for ") + name);
     }
+    g_vk->setObjectName(VK_OBJECT_TYPE_SHADER_MODULE, shader_module, name);
     shaderc_result_release(result);
     shaderc_compiler_release(compiler);
     return shader_module;

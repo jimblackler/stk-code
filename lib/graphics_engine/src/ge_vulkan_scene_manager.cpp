@@ -200,6 +200,7 @@ void GEVulkanSceneManager::drawAll(irr::u32 flags)
         clear_values.push_back(zero);
 
     VkCommandBuffer cmd = GEVulkanCommandLoader::beginSingleTimeCommands();
+    vk->beginDebugLabel(cmd, "Offscreen RTT Scene Render");
 
     GEVulkanCameraSceneNode* cam = static_cast<
         GEVulkanCameraSceneNode*>(getActiveCamera());
@@ -225,6 +226,7 @@ void GEVulkanSceneManager::drawAll(irr::u32 flags)
     dc->reset();
 
     vkCmdEndRenderPass(cmd);
+    vk->endDebugLabel(cmd);
 
     GEVulkanCommandLoader::endSingleTimeCommands(cmd);
     vk->handleDeletedTextures();

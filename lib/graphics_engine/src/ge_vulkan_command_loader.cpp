@@ -77,6 +77,8 @@ void GEVulkanCommandLoader::init(GEVulkanDriver* vk)
             throw std::runtime_error(
                 "GEVulkanCommandLoader: vkCreateCommandPool failed");
         }
+        g_vk->setObjectName(VK_OBJECT_TYPE_COMMAND_POOL, g_command_pools[i],
+            "loader_command_pool_" + std::to_string(i));
         VkFenceCreateInfo fence_info = {};
         fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         result = vkCreateFence(g_vk->getDevice(), &fence_info, NULL,
@@ -86,6 +88,8 @@ void GEVulkanCommandLoader::init(GEVulkanDriver* vk)
             throw std::runtime_error(
                 "GEVulkanCommandLoader: vkCreateFence failed");
         }
+        g_vk->setObjectName(VK_OBJECT_TYPE_FENCE, g_command_fences[i],
+            "loader_command_fence_" + std::to_string(i));
     }
 
     for (unsigned i = 0; i < thread_count - 1; i++)
@@ -211,6 +215,8 @@ VkCommandBuffer GEVulkanCommandLoader::beginSingleTimeCommands()
 
     VkCommandBuffer command_buffer;
     vkAllocateCommandBuffers(g_vk->getDevice(), &alloc_info, &command_buffer);
+    g_vk->setObjectName(VK_OBJECT_TYPE_COMMAND_BUFFER, command_buffer,
+        "single_time_command_buffer_" + std::to_string(g_loader_id));
 
     VkCommandBufferBeginInfo begin_info = {};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;

@@ -300,7 +300,72 @@ namespace GE
         void destroyVulkan();
         bool createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
                           VmaAllocationCreateInfo& alloc_create_info,
-                          VkBuffer& buffer, VmaAllocation& buffer_allocation);
+                          VkBuffer& buffer, VmaAllocation& buffer_allocation,
+                          const char* debug_name = nullptr);
+        template <typename T>
+        void setObjectName(VkObjectType type, T handle, const char* name) const
+        {
+            uint64_t h = (uint64_t)handle;
+            if (!vkSetDebugUtilsObjectNameEXT || !m_vk ||
+                m_vk->device == VK_NULL_HANDLE || h == 0 || !name ||
+                name[0] == '\0')
+                return;
+            VkDebugUtilsObjectNameInfoEXT name_info = {};
+            name_info.sType =
+                VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+            name_info.objectType = type;
+            name_info.objectHandle = h;
+            name_info.pObjectName = name;
+            vkSetDebugUtilsObjectNameEXT(m_vk->device, &name_info);
+        }
+        template <typename T>
+        void setObjectName(VkObjectType type, T handle,
+                           const std::string& name) const
+        {
+            setObjectName(type, handle, name.c_str());
+        }
+        void beginDebugLabel(VkCommandBuffer cmd, const char* label,
+                             const float color[4] = nullptr) const
+        {
+            if (!vkCmdBeginDebugUtilsLabelEXT || cmd == VK_NULL_HANDLE ||
+                !label)
+                return;
+            VkDebugUtilsLabelEXT label_info = {};
+            label_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+            label_info.pLabelName = label;
+            if (color)
+            {
+                label_info.color[0] = color[0];
+                label_info.color[1] = color[1];
+                label_info.color[2] = color[2];
+                label_info.color[3] = color[3];
+            }
+            vkCmdBeginDebugUtilsLabelEXT(cmd, &label_info);
+        }
+        void endDebugLabel(VkCommandBuffer cmd) const
+        {
+            if (!vkCmdEndDebugUtilsLabelEXT || cmd == VK_NULL_HANDLE)
+                return;
+            vkCmdEndDebugUtilsLabelEXT(cmd);
+        }
+        void insertDebugLabel(VkCommandBuffer cmd, const char* label,
+                              const float color[4] = nullptr) const
+        {
+            if (!vkCmdInsertDebugUtilsLabelEXT || cmd == VK_NULL_HANDLE ||
+                !label)
+                return;
+            VkDebugUtilsLabelEXT label_info = {};
+            label_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+            label_info.pLabelName = label;
+            if (color)
+            {
+                label_info.color[0] = color[0];
+                label_info.color[1] = color[1];
+                label_info.color[2] = color[2];
+                label_info.color[3] = color[3];
+            }
+            vkCmdInsertDebugUtilsLabelEXT(cmd, &label_info);
+        }
         VkPhysicalDevice getPhysicalDevice() const { return m_physical_device; }
         const VkPhysicalDeviceFeatures& getPhysicalDeviceFeatures() const
                                                           { return m_features; }
