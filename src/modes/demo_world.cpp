@@ -20,7 +20,9 @@
 
 #include "config/player_manager.hpp"
 #include "config/user_config.hpp"
+#include "guiengine/engine.hpp"
 #include "guiengine/modaldialog.hpp"
+#include "guiengine/screen.hpp"
 #include "input/device_manager.hpp"
 #include "input/keyboard_device.hpp"
 #include "input/input_manager.hpp"
@@ -139,6 +141,19 @@ bool DemoWorld::updateIdleTimeAndStartDemo(float dt)
     // We get crashes if stk is activated when a modal dialog is open
     if(GUIEngine::ModalDialog::isADialogActive())
         return false;
+
+    GUIEngine::Screen* current_screen = GUIEngine::getCurrentScreen();
+    if (current_screen)
+    {
+        const std::string& name = current_screen->getName();
+        if (name.rfind("options/", 0) == 0 ||
+            name == "user_screen.stkgui" ||
+            name == "online/register.stkgui")
+        {
+            m_current_idle_time = 0;
+            return false;
+        }
+    }
 
     m_current_idle_time += dt;
     if(m_current_idle_time <= m_max_idle_time)
