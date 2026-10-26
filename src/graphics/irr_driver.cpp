@@ -624,7 +624,7 @@ begin:
             if (!m_device && driver_created == video::EDT_VULKAN)
             {
                 display_msg = L"Vulkan unsupported";
-                UserConfigParams::m_render_driver.revertToDefaults();
+                UserConfigParams::m_render_driver = "opengl";
                 goto begin;
             }
 

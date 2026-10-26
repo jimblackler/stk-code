@@ -111,9 +111,9 @@ void override_default_params_for_mobile()
     UserConfigParams::m_max_texture_size = 256;
     UserConfigParams::m_high_definition_textures = false;
     
-    // Enable advanced lighting only for android >= 8
+    // Disable advanced lighting by default
 #ifdef ANDROID
-    UserConfigParams::m_dynamic_lights = (SDL_GetAndroidSDKVersion() >= 26);
+    UserConfigParams::m_dynamic_lights = false;
 #endif
 
     // Disable light scattering for better performance
@@ -201,34 +201,8 @@ void override_default_params_for_mobile()
         break;
     }
     
-    int total_memory = ceilf((float)(SDL_GetSystemRAM()) / 1024);
-    
-    if ((total_memory >= 8) && (SDL_GetAndroidSDKVersion() >= 31))
-    {
-        // Use 100% scale on devices with 8GB RAM and Android >= 12
-        UserConfigParams::m_scale_rtts_factor = 1.0f;
-    }
-    else if (ddpi < 1)
-    {
-        Log::warn("MainAndroid", "Failed to get display DPI.");
-        UserConfigParams::m_scale_rtts_factor = 0.7f;
-    }
-    else
-    {
-        // Update rtts scale based on display DPI
-        if (ddpi > 400)
-            UserConfigParams::m_scale_rtts_factor = 0.6f;
-        else if (ddpi > 300)
-            UserConfigParams::m_scale_rtts_factor = 0.65f;
-        else if (ddpi > 200)
-            UserConfigParams::m_scale_rtts_factor = 0.7f;
-        else if (ddpi > 150)
-            UserConfigParams::m_scale_rtts_factor = 0.75f;
-        else
-            UserConfigParams::m_scale_rtts_factor = 0.8f;
-
-        Log::info("MainAndroid", "Display DPI: %i", ddpi);
-    }
+    Log::info("MainAndroid", "Display DPI: %i", ddpi);
+    UserConfigParams::m_scale_rtts_factor = 2.0f;
 
     Log::info("MainAndroid", "Render scale: %f",
               (float)UserConfigParams::m_scale_rtts_factor);

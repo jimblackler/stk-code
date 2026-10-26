@@ -697,7 +697,7 @@ namespace UserConfigParams
         PARAM_DEFAULT(BoolUserConfigParam(true, "old_driver_popup",
         &m_video_group, "Determines if popup message about too old drivers should be displayed."));
     PARAM_PREFIX FloatUserConfigParam       m_scale_rtts_factor
-        PARAM_DEFAULT(FloatUserConfigParam(1.0f, "scale_rtts_factor",
+        PARAM_DEFAULT(FloatUserConfigParam(2.0f, "scale_rtts_factor",
         &m_video_group, "Custom value for RTTs resolution. "
                         "Value should be smaller or equal to 1.0"));
     PARAM_PREFIX IntUserConfigParam         m_max_texture_size
@@ -721,7 +721,7 @@ namespace UserConfigParams
         &m_video_group, "Render video driver to use, at the moment opengl, vulkan or directx9 is supported.") );
 #else
     PARAM_PREFIX StringUserConfigParam         m_render_driver
-        PARAM_DEFAULT(  StringUserConfigParam("opengl", "render_driver",
+        PARAM_DEFAULT(  StringUserConfigParam("vulkan", "render_driver",
         &m_video_group, "Render video driver to use, at the moment opengl, vulkan or directx9 is supported.") );
 #endif
 
@@ -975,7 +975,7 @@ namespace UserConfigParams
                 "Whether to display animated characters") );
 
     PARAM_PREFIX IntUserConfigParam        m_geometry_level
-            PARAM_DEFAULT(  IntUserConfigParam(2,
+            PARAM_DEFAULT(  IntUserConfigParam(5,
                             "geometry-level", &m_graphics_quality,
                 "Geometry quality 0=lowest level, no details; "
                 "5=everything is displayed") );
@@ -1006,11 +1006,11 @@ namespace UserConfigParams
                            "light_scatter", &m_graphics_quality,
                            "Enable light scattering shaders") );
     PARAM_PREFIX IntUserConfigParam          m_shadows_resolution
-            PARAM_DEFAULT( IntUserConfigParam(0,
+            PARAM_DEFAULT( IntUserConfigParam(2048,
                            "shadows_resolution", &m_graphics_quality,
                            "Shadow resolution (0 = disabled") );
     PARAM_PREFIX BoolUserConfigParam          m_pcss
-            PARAM_DEFAULT( BoolUserConfigParam(false,
+            PARAM_DEFAULT( BoolUserConfigParam(true,
                            "pcss", &m_graphics_quality,
                            "Enable Percentage Closer Soft Shadows") );
     PARAM_PREFIX BoolUserConfigParam          m_degraded_IBL
