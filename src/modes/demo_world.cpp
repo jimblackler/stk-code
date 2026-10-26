@@ -29,7 +29,9 @@
 #include "race/race_manager.hpp"
 #include "tracks/track.hpp"
 #include "tracks/track_manager.hpp"
+#include "utils/random_generator.hpp"
 
+#include <algorithm>
 #include <limits>
 
 std::vector<std::string> DemoWorld::m_demo_tracks;
@@ -51,11 +53,8 @@ DemoWorld::DemoWorld()
     m_abort = false;
     ProfileWorld::setProfileModeLaps(m_num_laps);
 
-    // Randomly select whether reverse mode is activated or not.
-    if (rand() % 2 == 0)
-        RaceManager::get()->setReverseTrack(true);
-    else
-        RaceManager::get()->setReverseTrack(false);
+    // Always use forward track direction so the attract sequence is deterministic.
+    RaceManager::get()->setReverseTrack(false);
 
     // Selects the user's current game mode setting (not all modes are supported)
     switch (atoi(UserConfigParams::m_game_mode.toString().c_str()))
@@ -160,7 +159,48 @@ bool DemoWorld::updateIdleTimeAndStartDemo(float dt)
         return false;
 
     if(m_demo_tracks.size()==0)
-        m_demo_tracks = track_manager->getAllTrackIdentifiers();
+    {
+        // Standard race tracks ordered from most resource/memory-intensive to least
+        // (see SuperTuxKart Level Resource-Intensity Report).
+        // Note: To order strictly by Texture VRAM (MB) instead of overall composite
+        // resource-intensity rank, swap the order of candela_city/cocoa_temple/gran_paradiso_island, etc.
+        static const std::vector<std::string> kOrderedDemoTracks = {
+            "black_forest",
+            "candela_city",
+            "cocoa_temple",
+            "gran_paradiso_island",
+            "ravenbridge_mansion",
+            "cornfield_crossing",
+            "abyss",
+            "volcano_island",
+            "mines",
+            "stk_enterprise",
+            "zengarden",
+            "snowmountain",
+            "lighthouse",
+            "scotland",
+            "sandtrack",
+            "hacienda",
+            "olivermath",
+            "fortmagma",
+            "xr591",
+            "snowtuxpeak",
+            "minigolf"
+        };
+        for (const std::string& ident : kOrderedDemoTracks)
+        {
+            if (track_manager->getTrack(ident))
+                m_demo_tracks.push_back(ident);
+        }
+        for (const std::string& ident : track_manager->getAllTrackIdentifiers())
+        {
+            if (std::find(m_demo_tracks.begin(), m_demo_tracks.end(), ident) ==
+                m_demo_tracks.end())
+            {
+                m_demo_tracks.push_back(ident);
+            }
+        }
+    }
     Track *track = track_manager->getTrack(m_demo_tracks[0]);
     // Remove arena tracks and internal tracks like the overworld
     // (outside the if statement above in case that
@@ -196,10 +236,11 @@ bool DemoWorld::updateIdleTimeAndStartDemo(float dt)
     input_manager->getDeviceManager()->setAssignMode(ASSIGN);
 
     m_do_demo = true;
+    srand(12345);
+    RandomGenerator::seed(12345);
     RaceManager::get()->setNumKarts(m_default_num_karts);
     // Use the user's last selected kart
     RaceManager::get()->setPlayerKart(0, UserConfigParams::m_default_kart);
-    RaceManager::get()->setupPlayerKartInfo();
     RaceManager::get()->startSingleRace(m_demo_tracks[0], m_num_laps, false);
     m_demo_tracks.push_back(m_demo_tracks[0]);
     m_demo_tracks.erase(m_demo_tracks.begin());

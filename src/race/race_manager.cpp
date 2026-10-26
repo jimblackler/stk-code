@@ -334,6 +334,11 @@ void RaceManager::setTrack(const std::string& track)
  */
 void RaceManager::computeRandomKartList()
 {
+    if (DemoWorld::isDemoMode())
+    {
+        srand(12345);
+        RandomGenerator::seed(12345);
+    }
     int n = m_num_karts - (int)m_player_karts.size();
     if(UserConfigParams::logMisc())
         Log::info("RaceManager", "AI karts count = %d for m_num_karts = %d and "
@@ -608,7 +613,9 @@ void RaceManager::startNextRace()
         {
             if (random_pos_available)
             {
-                unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+                unsigned seed = DemoWorld::isDemoMode()
+                    ? 12345u
+                    : (unsigned)std::chrono::system_clock::now().time_since_epoch().count();
                 std::shuffle(m_kart_status.begin() + offset, m_kart_status.end(),
                     std::default_random_engine(seed));
             }

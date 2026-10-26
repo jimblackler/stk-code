@@ -52,6 +52,7 @@
 #include "karts/kart_properties_manager.hpp"
 #include "karts/kart_rewinder.hpp"
 #include "main_loop.hpp"
+#include "modes/demo_world.hpp"
 #include "modes/overworld.hpp"
 #include "modes/tutorial_utils.hpp"
 #include "network/child_loop.hpp"
@@ -202,7 +203,14 @@ void World::init()
     // karts can be positioned properly on (and not in) the tracks.
     // This also defines the static Track::getCurrentTrack function.
     if (m_process_type == PT_MAIN)
+    {
+        if (DemoWorld::isDemoMode())
+        {
+            srand(12345);
+            RandomGenerator::seed(12345);
+        }
         track->loadTrackModel(RaceManager::get()->getReverseTrack());
+    }
     else
     {
         Track* child_track = Track::getCurrentTrack();
@@ -243,6 +251,12 @@ void World::init()
     // Assign team of AIs for team mode before createKart
     if (hasTeam())
         setAITeam();
+
+    if (DemoWorld::isDemoMode())
+    {
+        srand(12345);
+        RandomGenerator::seed(12345);
+    }
 
     for(unsigned int i=0; i<num_karts; i++)
     {
@@ -442,6 +456,11 @@ void World::reset(bool restart)
     // Reset all data structures that depend on number of karts.
     if (m_process_type == PT_MAIN)
         irr_driver->reset();
+    if (DemoWorld::isDemoMode())
+    {
+        srand(12345);
+        RandomGenerator::seed(12345);
+    }
     m_unfair_team = false;
 }   // reset
 

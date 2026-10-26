@@ -37,6 +37,7 @@
 
 #include <assert.h>
 #include <iostream> //debug
+#include <random>
 
 /** \cond DOXYGEN_IGNORE */
 namespace Scripting
@@ -119,13 +120,15 @@ namespace Scripting
         /** Generate a random integer value */
         int randomInt(int min, int maxExclusive)
         {
-            return min + (rand() % (maxExclusive - min));
+            static std::mt19937 s_rng(12345);
+            return min + (int)(s_rng() % (maxExclusive - min));
         }
 
         /** Generate a random floating-point value */
         float randomFloat(int min, int maxExclusive)
         {
-            int val = min * 100 + (rand() % ((maxExclusive - min) * 100));
+            static std::mt19937 s_rng(12345);
+            int val = min * 100 + (int)(s_rng() % ((maxExclusive - min) * 100));
             return val / 100.0f;
         }
 

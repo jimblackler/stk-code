@@ -19,6 +19,7 @@
 #include "audio/sfx_base.hpp"
 #include "audio/sfx_manager.hpp"
 #include "graphics/weather.hpp"
+#include "modes/demo_world.hpp"
 #include "modes/world.hpp"
 #include "tracks/track.hpp"
 #include "utils/random_generator.hpp"
@@ -43,8 +44,15 @@ Weather::Weather()
         m_weather_sound = SFXManager::get()->createSoundSource(sound);
     }
 
-    RandomGenerator g;
-    m_next_lightning = (float)g.get(35);
+    if (DemoWorld::isDemoMode())
+    {
+        m_next_lightning = 35.0f;
+    }
+    else
+    {
+        RandomGenerator g;
+        m_next_lightning = (float)g.get(35);
+    }
 }   // Weather
 
 // ----------------------------------------------------------------------------
@@ -80,8 +88,15 @@ void Weather::update(float dt)
             m_thunder_sound->play();
         }
 
-        RandomGenerator g;
-        m_next_lightning = 35 + (float)g.get(35);
+        if (DemoWorld::isDemoMode())
+        {
+            m_next_lightning = 50.0f;
+        }
+        else
+        {
+            RandomGenerator g;
+            m_next_lightning = 35 + (float)g.get(35);
+        }
     }
     
     if (m_lightning > 0.0f)

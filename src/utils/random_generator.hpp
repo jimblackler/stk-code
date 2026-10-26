@@ -50,7 +50,11 @@ public:
        std::uniform_int_distribution<int> dist(0, n - 1);
        return dist(getGenerator());
     }
-    static void seed(int s) {m_random_value = s;}
+    static void seed(int s)
+    {
+        m_random_value = s;
+        getGenerator().seed(s);
+    }
 };  // RandomGenerator
 
 #endif // HEADER_RANDOM_GENERATOR_HPP

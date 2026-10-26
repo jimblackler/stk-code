@@ -60,6 +60,7 @@
 #include "karts/abstract_kart.hpp"
 #include "karts/kart_properties.hpp"
 #include "main_loop.hpp"
+#include "modes/demo_world.hpp"
 #include "modes/linear_world.hpp"
 #include "modes/easter_egg_hunt.hpp"
 #include "network/network_config.hpp"
@@ -2033,7 +2034,8 @@ void Track::loadTrackModel(bool reverse_track, unsigned int mode_id)
     else
     {
         // Seed random engine locally
-        uint32_t seed = (uint32_t)StkTime::getTimeSinceEpoch();
+        uint32_t seed = DemoWorld::isDemoMode()
+            ? 12345u : (uint32_t)StkTime::getTimeSinceEpoch();
         ItemManager::updateRandomSeed(seed);
         m_item_manager = std::make_shared<ItemManager>();
         powerup_manager->setRandomSeed(seed);
