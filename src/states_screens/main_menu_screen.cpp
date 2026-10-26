@@ -336,34 +336,8 @@ void MainMenuScreen::onUpdate(float delta)
         m_user_id->setText(player->getName());
     }
 
-    // Ask if user want to play tutorial when profile is newly created
-    if (player->getUseFrequency() != 0)
-        return;
-
-#ifdef ANDROID
-    // Don't show tutorial dialog on Android TV
-    if (SDL_IsAndroidTV())
-        return;
-#endif
-
-    player->incrementUseFrequency();
-    class PlayTutorial :
-          public MessageDialog::IConfirmDialogListener
-    {
-    public:
-        virtual void onConfirm()
-        {
-            GUIEngine::ModalDialog::dismiss();
-            TutorialUtils::startTutorial();
-        }   // onConfirm
-    };   // PlayTutorial
-
-    MessageDialog* dialog =
-    new MessageDialog(_("Would you like to play the tutorial of the game?"),
-        MessageDialog::MESSAGE_DIALOG_YESNO, new PlayTutorial(),
-        true/*delete_listener*/, true/*from_queue*/);
-    GUIEngine::DialogQueue::get()->pushDialog(dialog,
-        false/*closes_any_dialog*/);
+    if (player->getUseFrequency() == 0)
+        player->incrementUseFrequency();
 #endif
 }   // onUpdate
 

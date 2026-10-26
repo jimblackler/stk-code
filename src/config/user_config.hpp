@@ -555,7 +555,7 @@ namespace UserConfigParams
             "Auto acceleration for multitouch controls.") );
 
     PARAM_PREFIX IntUserConfigParam         m_multitouch_controls
-            PARAM_DEFAULT( IntUserConfigParam(0, "multitouch_controls",
+            PARAM_DEFAULT( IntUserConfigParam(1, "multitouch_controls",
             &m_multitouch_group,
             "Multitouch mode: 0 = undefined, 1 = steering wheel, 2 = accelerometer, 3 = gyroscope"));
 
@@ -1327,7 +1327,7 @@ namespace UserConfigParams
     // ---- Internet related
 
     PARAM_PREFIX IntUserConfigParam        m_internet_status
-            PARAM_DEFAULT(  IntUserConfigParam(0, "enable_internet",
+            PARAM_DEFAULT(  IntUserConfigParam(2, "enable_internet",
                                                "Status of internet: 0 user "
                                                "wasn't asked, 1: allowed, 2: "
                                                "not allowed") );
